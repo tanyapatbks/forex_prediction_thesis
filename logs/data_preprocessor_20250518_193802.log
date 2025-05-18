@@ -1,0 +1,16 @@
+2025-05-18 19:38:02 - data_preprocessor - INFO - Starting preprocessing pipeline for currency pairs: ['EURUSD', 'GBPUSD', 'USDJPY']
+2025-05-18 19:38:02 - data_preprocessor - INFO - Using target type: continuous
+2025-05-18 19:38:02 - data_preprocessor - INFO - No missing values found in EURUSD
+2025-05-18 19:38:02 - data_preprocessor - INFO - No missing values found in GBPUSD
+2025-05-18 19:38:02 - data_preprocessor - INFO - No missing values found in USDJPY
+2025-05-18 19:38:02 - data_preprocessor - WARNING - Timeframe inconsistency detected for GBPUSD
+2025-05-18 19:38:02 - data_preprocessor - WARNING - GBPUSD: {'min_date': Timestamp('2020-01-01 22:00:00'), 'max_date': Timestamp('2025-04-25 20:00:00'), 'total_rows': 33169}
+2025-05-18 19:38:02 - data_preprocessor - WARNING - EURUSD: {'min_date': Timestamp('2020-01-01 22:00:00'), 'max_date': Timestamp('2025-04-25 20:00:00'), 'total_rows': 33172}
+2025-05-18 19:38:02 - data_preprocessor - WARNING - Timeframe inconsistency detected between currency pairs
+2025-05-18 19:38:02 - data_preprocessor - INFO - Aligning timeframes across all currency pairs
+2025-05-18 19:38:02 - data_preprocessor - WARNING - After alignment, GBPUSD has 15 missing values
+2025-05-18 19:38:02 - data_preprocessor - INFO - All currency pairs aligned to a common timeframe with 33172 data points
+2025-05-18 19:38:02 - data_preprocessor - INFO - Created continuous target variable (normalized price change) with look_ahead=1
+2025-05-18 19:38:02 - data_preprocessor - INFO - Created continuous target variable (normalized price change) with look_ahead=1
+2025-05-18 19:38:02 - data_preprocessor - INFO - Created continuous target variable (normalized price change) with look_ahead=1
+2025-05-18 19:38:02 - data_preprocessor - INFO - Preprocessing pipeline completed successfully

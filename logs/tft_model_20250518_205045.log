@@ -1,0 +1,3 @@
+2025-05-18 20:50:45 - tft_model - INFO - Creating time index column
+2025-05-18 20:50:45 - tft_model - INFO - Using default GroupNormalizer with no transformation for continuous values in [-1, 1] range
+2025-05-18 20:50:46 - tft_model - INFO - Created TimeSeriesDataSets with 9893 training, 2399 validation, and 1941 testing samples

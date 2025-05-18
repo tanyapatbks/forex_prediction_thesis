@@ -1,0 +1,54 @@
+{
+    "model_config": {
+        "cnn_layers": [
+            {
+                "filters": 64,
+                "kernel_size": 3,
+                "activation": "relu"
+            },
+            {
+                "filters": 128,
+                "kernel_size": 3,
+                "activation": "relu"
+            }
+        ],
+        "lstm_layers": [
+            {
+                "units": 100,
+                "return_sequences": true
+            },
+            {
+                "units": 50,
+                "return_sequences": false
+            }
+        ],
+        "dense_layers": [
+            {
+                "units": 50,
+                "activation": "relu"
+            },
+            {
+                "units": 25,
+                "activation": "relu"
+            }
+        ],
+        "dropout_rate": 0.3,
+        "learning_rate": 0.001,
+        "l1_reg": 0.0,
+        "l2_reg": 0.0
+    },
+    "training_config": {
+        "batch_size": 32,
+        "epochs": 100,
+        "patience": 15,
+        "min_delta": 0.001,
+        "validation_split": 0.0,
+        "shuffle": true
+    },
+    "input_shape": [
+        60,
+        50
+    ],
+    "output_size": 1,
+    "regression": true
+}

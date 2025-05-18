@@ -1,0 +1,28 @@
+2025-05-18 13:59:55 - data_loader - INFO - Loading raw data for EURUSD (1H) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/raw/EURUSD_1H.csv
+2025-05-18 13:59:55 - data_loader - INFO - Successfully loaded data for EURUSD. Shape: (33172, 5)
+2025-05-18 13:59:55 - data_loader - INFO - Loading raw data for GBPUSD (1H) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/raw/GBPUSD_1H.csv
+2025-05-18 13:59:55 - data_loader - INFO - Successfully loaded data for GBPUSD. Shape: (33169, 5)
+2025-05-18 13:59:55 - data_loader - INFO - Loading raw data for USDJPY (1H) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/raw/USDJPY_1H.csv
+2025-05-18 13:59:55 - data_loader - INFO - Successfully loaded data for USDJPY. Shape: (33172, 5)
+2025-05-18 13:59:55 - data_loader - INFO - Loaded data for 3 currency pairs
+2025-05-18 13:59:55 - data_loader - INFO - Data split - Train: (9992, 6), Validation: (2498, 6), Test: (2040, 6)
+2025-05-18 13:59:55 - data_loader - INFO - Saved train data for EURUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_train.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved val data for EURUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_val.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved test data for EURUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_test.csv
+2025-05-18 13:59:55 - data_loader - INFO - Data split - Train: (9992, 6), Validation: (2498, 6), Test: (2040, 6)
+2025-05-18 13:59:55 - data_loader - INFO - Saved train data for GBPUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_train.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved val data for GBPUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_val.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved test data for GBPUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_test.csv
+2025-05-18 13:59:55 - data_loader - INFO - Data split - Train: (9992, 6), Validation: (2498, 6), Test: (2040, 6)
+2025-05-18 13:59:55 - data_loader - INFO - Saved train data for USDJPY to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_train.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved val data for USDJPY to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_val.csv
+2025-05-18 13:59:55 - data_loader - INFO - Saved test data for USDJPY to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_test.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded train data for EURUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_train.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded val data for EURUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_val.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded test data for EURUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/EURUSD_1H_test.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded train data for GBPUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_train.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded val data for GBPUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_val.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded test data for GBPUSD from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/GBPUSD_1H_test.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded train data for USDJPY from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_train.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded val data for USDJPY from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_val.csv
+2025-05-18 14:00:24 - data_loader - INFO - Loaded test data for USDJPY from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/processed/USDJPY_1H_test.csv

@@ -73,6 +73,18 @@ class TFTModule(pl.LightningModule):
         return self.model.predict(data, **kwargs)
 
 
+import os
+import numpy as np
+import pandas as pd
+import torch
+import pytorch_lightning as pl
+from pytorch_forecasting import TimeSeriesDataSet, TemporalFusionTransformer
+from pytorch_forecasting.data import GroupNormalizer
+from pytorch_forecasting.metrics import QuantileLoss, SMAPE, MAE, RMSE
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from typing import Dict, List, Tuple, Optional, Union
+import logging
+
 def prepare_data_for_tft(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
@@ -115,6 +127,27 @@ def prepare_data_for_tft(
     Returns:
         Tuple[TimeSeriesDataSet, TimeSeriesDataSet, TimeSeriesDataSet, Dict]: Training, validation, and test datasets, and data parameters
     """
+    logger = logging.getLogger("tft_model")
+    
+    # Convert target column to float - important fix for TFT
+    for df in [train_df, val_df, test_df]:
+        if target_variable in df.columns:
+            df[target_variable] = df[target_variable].astype(float)
+    
+    # Pre-process: Check for NaN or infinity values in target
+    for df_name, df in zip(['train', 'val', 'test'], [train_df, val_df, test_df]):
+        if target_variable in df.columns:
+            if df[target_variable].isna().any():
+                logger.warning(f"NaN values found in {target_variable} column of {df_name} dataset. Filling with 0.")
+                df[target_variable] = df[target_variable].fillna(0)
+            
+            # Replace infinity values
+            inf_mask = np.isinf(df[target_variable])
+            if inf_mask.any():
+                logger.warning(f"Infinity values found in {target_variable} column of {df_name} dataset. Replacing with min/max values.")
+                df.loc[inf_mask & (df[target_variable] > 0), target_variable] = 1.0  # Replace +inf with max (1.0)
+                df.loc[inf_mask & (df[target_variable] < 0), target_variable] = -1.0  # Replace -inf with min (-1.0)
+    
     # Create a time index if not provided
     if time_idx_column is None:
         logger.info("Creating time index column")
@@ -182,9 +215,10 @@ def prepare_data_for_tft(
     
     # Set target normalizer if not provided
     if target_normalizer is None:
+        logger.info("Using default GroupNormalizer with no transformation for continuous values in [-1, 1] range")
         target_normalizer = GroupNormalizer(
             groups=group_ids,
-            transformation="softplus"
+            transformation=None  # No transformation for values that are already normalized to [-1, 1]
         )
     
     # Create training dataset

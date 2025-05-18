@@ -1,0 +1,15 @@
+2025-05-18 19:41:28 - cnn_lstm - INFO - Created 9833 sequences of length 60
+2025-05-18 19:41:28 - cnn_lstm - INFO - Created 2339 sequences of length 60
+2025-05-18 19:41:28 - cnn_lstm - INFO - Built CNN-LSTM model with input shape (60, 50), regression task
+2025-05-18 19:43:36 - cnn_lstm - INFO - Saved trained model to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/models/trained/cnn_lstm_EURUSD.h5
+2025-05-18 19:43:36 - cnn_lstm - INFO - CNN-LSTM model training completed
+2025-05-18 19:43:36 - cnn_lstm - INFO - Created 9833 sequences of length 60
+2025-05-18 19:43:36 - cnn_lstm - INFO - Created 2339 sequences of length 60
+2025-05-18 19:43:36 - cnn_lstm - INFO - Built CNN-LSTM model with input shape (60, 50), regression task
+2025-05-18 19:45:43 - cnn_lstm - INFO - Saved trained model to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/models/trained/cnn_lstm_GBPUSD.h5
+2025-05-18 19:45:43 - cnn_lstm - INFO - CNN-LSTM model training completed
+2025-05-18 19:45:43 - cnn_lstm - INFO - Created 9833 sequences of length 60
+2025-05-18 19:45:43 - cnn_lstm - INFO - Created 2339 sequences of length 60
+2025-05-18 19:45:43 - cnn_lstm - INFO - Built CNN-LSTM model with input shape (60, 50), regression task
+2025-05-18 19:47:43 - cnn_lstm - INFO - Saved trained model to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/models/trained/cnn_lstm_USDJPY.h5
+2025-05-18 19:47:43 - cnn_lstm - INFO - CNN-LSTM model training completed

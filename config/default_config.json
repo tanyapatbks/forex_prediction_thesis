@@ -1,0 +1,138 @@
+{
+    "preprocessing": {
+        "timeframe": "1H",
+        "handle_missing_method": "interpolate",
+        "target_type": "continuous",
+        "look_ahead": 1,
+        "threshold": 0.0,
+        "normalization_window": 20,
+        "min_max_scale": true,
+        "train_start_date": "2020-01-01",
+        "train_end_date": "2021-12-31",
+        "test_start_date": "2022-01-01",
+        "test_end_date": "2022-04-30",
+        "validation_size": 0.2
+    },
+    "feature_enhancement": {
+        "selection_method": "random_forest",
+        "top_n": 50,
+        "timeframe": "1H"
+    },
+    "model_training": {
+        "CNN-LSTM": {
+            "sequence_length": 60,
+            "regression": true,
+            "model_config": {
+                "cnn_layers": [
+                    {
+                        "filters": 64,
+                        "kernel_size": 3,
+                        "activation": "relu"
+                    },
+                    {
+                        "filters": 128,
+                        "kernel_size": 3,
+                        "activation": "relu"
+                    }
+                ],
+                "lstm_layers": [
+                    {
+                        "units": 100,
+                        "return_sequences": true
+                    },
+                    {
+                        "units": 50,
+                        "return_sequences": false
+                    }
+                ],
+                "dense_layers": [
+                    {
+                        "units": 50,
+                        "activation": "relu"
+                    },
+                    {
+                        "units": 25,
+                        "activation": "relu"
+                    }
+                ],
+                "dropout_rate": 0.3,
+                "learning_rate": 0.001,
+                "l1_reg": 0.0,
+                "l2_reg": 0.0
+            },
+            "training_config": {
+                "batch_size": 32,
+                "epochs": 100,
+                "patience": 15,
+                "min_delta": 0.001,
+                "validation_split": 0.0,
+                "shuffle": true
+            }
+        },
+        "TFT": {
+            "max_encoder_length": 24,
+            "model_config": {
+                "hidden_size": 32,
+                "attention_head_size": 4,
+                "dropout": 0.1,
+                "hidden_continuous_size": 16,
+                "learning_rate": 0.001,
+                "log_interval": 10,
+                "reduce_on_plateau_patience": 5
+            },
+            "training_config": {
+                "batch_size": 128,
+                "max_epochs": 100,
+                "patience": 10,
+                "min_delta": 0.001,
+                "gradient_clip_val": 0.1
+            }
+        },
+        "XGBoost": {
+            "sequence_length": 1,
+            "regression": true,
+            "model_config": {
+                "objective": "reg:squarederror",
+                "n_estimators": 100,
+                "max_depth": 6,
+                "learning_rate": 0.1,
+                "min_child_weight": 1,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "gamma": 0,
+                "reg_alpha": 0,
+                "reg_lambda": 1,
+                "random_state": 42
+            }
+        }
+    },
+    "evaluation": {
+        "CNN-LSTM": {
+            "sequence_length": 60,
+            "regression": true
+        },
+        "TFT": {
+            "max_encoder_length": 24,
+            "regression": true
+        },
+        "XGBoost": {
+            "sequence_length": 1,
+            "regression": true
+        },
+        "is_continuous": true,
+        "threshold": 0.1,
+        "position_sizing": true,
+        "transaction_cost": 0.0001,
+        "risk_free_rate": 0.0,
+        "market_condition_window": 20,
+        "market_condition_threshold": 0.05
+    },
+    "visualization": {
+        "signal_strength_plots": true,
+        "market_condition_analysis": true,
+        "returns_heatmap": true,
+        "equity_curves": true,
+        "drawdowns": true,
+        "feature_importance": true
+    }
+}

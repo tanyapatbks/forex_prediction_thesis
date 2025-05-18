@@ -1,0 +1,16 @@
+2025-05-18 20:23:49 - main - INFO - Loaded configuration from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/config/default_config.json
+2025-05-18 20:23:49 - main - INFO - Starting Forex Prediction Pipeline
+2025-05-18 20:23:49 - main - INFO - Stage 1: Data Preprocessing
+2025-05-18 20:23:49 - main - INFO - Processed data for 3 currency pairs
+2025-05-18 20:23:49 - main - INFO - Stage 2: Feature Enhancement
+2025-05-18 20:27:12 - main - INFO - Enhanced features for 3 currency pairs
+2025-05-18 20:27:12 - main - INFO - Stage 3: Model Training
+2025-05-18 20:27:12 - main - INFO - Training CNN-LSTM models
+2025-05-18 20:27:12 - main - INFO - Training CNN-LSTM model for EURUSD
+2025-05-18 20:29:19 - main - INFO - Completed training CNN-LSTM model for EURUSD
+2025-05-18 20:29:19 - main - INFO - Training CNN-LSTM model for GBPUSD
+2025-05-18 20:31:29 - main - INFO - Completed training CNN-LSTM model for GBPUSD
+2025-05-18 20:31:29 - main - INFO - Training CNN-LSTM model for USDJPY
+2025-05-18 20:33:40 - main - INFO - Completed training CNN-LSTM model for USDJPY
+2025-05-18 20:33:40 - main - INFO - Training TFT models
+2025-05-18 20:33:40 - main - INFO - Training TFT model for EURUSD

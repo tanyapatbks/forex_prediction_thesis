@@ -1,0 +1,95 @@
+2025-05-18 14:00:24 - feature_enhancement - INFO - Starting feature enhancement and selection pipeline using random_forest method
+2025-05-18 14:00:24 - feature_enhancement - INFO - Enhancing features for EURUSD
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:24 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:24 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:24 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:24 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:29 - feature_enhancement - INFO - Selected 50 features using random forest importance method
+2025-05-18 14:00:29 - feature_enhancement - INFO - Saved selected features for EURUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_train_random_forest_features.txt
+2025-05-18 14:00:29 - feature_enhancement - INFO - Saved feature data for EURUSD (train) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_train_features.csv
+2025-05-18 14:00:29 - feature_enhancement - INFO - Saved feature data for EURUSD (val) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_val_features.csv
+2025-05-18 14:00:29 - feature_enhancement - INFO - Saved feature data for EURUSD (test) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_test_features.csv
+2025-05-18 14:00:29 - feature_enhancement - INFO - Enhancing features for GBPUSD
+2025-05-18 14:00:29 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:29 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:29 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:30 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:30 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:30 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:30 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:35 - feature_enhancement - INFO - Selected 50 features using random forest importance method
+2025-05-18 14:00:35 - feature_enhancement - INFO - Saved selected features for GBPUSD to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_train_random_forest_features.txt
+2025-05-18 14:00:35 - feature_enhancement - INFO - Saved feature data for GBPUSD (train) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_train_features.csv
+2025-05-18 14:00:35 - feature_enhancement - INFO - Saved feature data for GBPUSD (val) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_val_features.csv
+2025-05-18 14:00:35 - feature_enhancement - INFO - Saved feature data for GBPUSD (test) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_test_features.csv
+2025-05-18 14:00:35 - feature_enhancement - INFO - Enhancing features for USDJPY
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:35 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:35 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added trend indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added momentum indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volatility indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added price pattern indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added volume indicators
+2025-05-18 14:00:35 - feature_enhancement - INFO - Added time features
+2025-05-18 14:00:35 - feature_enhancement - INFO - Dropped 99 rows with NaN values
+2025-05-18 14:00:41 - feature_enhancement - INFO - Selected 50 features using random forest importance method
+2025-05-18 14:00:41 - feature_enhancement - INFO - Saved selected features for USDJPY to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_train_random_forest_features.txt
+2025-05-18 14:00:41 - feature_enhancement - INFO - Saved feature data for USDJPY (train) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_train_features.csv
+2025-05-18 14:00:41 - feature_enhancement - INFO - Saved feature data for USDJPY (val) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_val_features.csv
+2025-05-18 14:00:41 - feature_enhancement - INFO - Saved feature data for USDJPY (test) to /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_test_features.csv
+2025-05-18 14:00:41 - feature_enhancement - INFO - Feature enhancement and selection pipeline completed successfully
+2025-05-18 14:00:41 - feature_enhancement - INFO - Loaded feature data for EURUSD (train) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_train_features.csv
+2025-05-18 14:00:41 - feature_enhancement - INFO - Loaded feature data for EURUSD (val) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_val_features.csv
+2025-05-18 14:00:41 - feature_enhancement - INFO - Loaded feature data for EURUSD (test) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_test_features.csv
+2025-05-18 14:03:09 - feature_enhancement - INFO - Loaded feature data for GBPUSD (train) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_train_features.csv
+2025-05-18 14:03:09 - feature_enhancement - INFO - Loaded feature data for GBPUSD (val) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_val_features.csv
+2025-05-18 14:03:09 - feature_enhancement - INFO - Loaded feature data for GBPUSD (test) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/GBPUSD_1H_test_features.csv
+2025-05-18 14:07:06 - feature_enhancement - INFO - Loaded feature data for USDJPY (train) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_train_features.csv
+2025-05-18 14:07:06 - feature_enhancement - INFO - Loaded feature data for USDJPY (val) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_val_features.csv
+2025-05-18 14:07:06 - feature_enhancement - INFO - Loaded feature data for USDJPY (test) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/USDJPY_1H_test_features.csv
+2025-05-18 14:08:53 - feature_enhancement - INFO - Loaded feature data for EURUSD (train) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_train_features.csv
+2025-05-18 14:08:53 - feature_enhancement - INFO - Loaded feature data for EURUSD (val) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_val_features.csv
+2025-05-18 14:08:53 - feature_enhancement - INFO - Loaded feature data for EURUSD (test) from /Users/vebkks/Desktop/fx-revised/forex_prediction_thesis/data/features/EURUSD_1H_test_features.csv

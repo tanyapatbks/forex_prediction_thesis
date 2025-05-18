@@ -1,5 +1,5 @@
 """
-Performance metrics and evaluation utilities for Forex prediction models.
+Modified performance metrics for continuous target prediction.
 """
 
 import os
@@ -19,10 +19,38 @@ from src.utils.logger import setup_logger
 logger = setup_logger("performance_metrics")
 
 
+def convert_continuous_to_positions(
+    predictions: np.ndarray,
+    threshold: float = 0.1  # Threshold for determining significant movement
+) -> np.ndarray:
+    """
+    Convert continuous model predictions to trading positions.
+    
+    Args:
+        predictions (np.ndarray): Continuous model predictions (-1 to 1 scale)
+        threshold (float, optional): Threshold for determining significant movement.
+                                  Values between -threshold and threshold are considered neutral.
+                                  Defaults to 0.1.
+        
+    Returns:
+        np.ndarray: Trading positions (1 for long, 0 for neutral, -1 for short)
+    """
+    positions = np.zeros_like(predictions)
+    
+    # Assign positions based on prediction strength
+    positions[predictions > threshold] = 1       # Strong up trend - go long
+    positions[predictions < -threshold] = -1     # Strong down trend - go short
+    # Values between -threshold and threshold remain 0 (neutral)
+    
+    return positions
+
+
 def calculate_returns(
     price_data: pd.DataFrame,
     positions: np.ndarray,
     start_idx: int = 0,
+    position_sizing: bool = True,  # Whether to use position sizing based on signal strength
+    raw_predictions: Optional[np.ndarray] = None,  # Raw prediction values for position sizing
     transaction_cost: float = 0.0001,
     initial_capital: float = 10000,
     position_size: float = 1.0
@@ -34,6 +62,9 @@ def calculate_returns(
         price_data (pd.DataFrame): DataFrame with price data
         positions (np.ndarray): Array of positions (1 for long, 0 for neutral, -1 for short)
         start_idx (int, optional): Starting index. Defaults to 0.
+        position_sizing (bool, optional): Whether to use position sizing based on signal strength.
+                                        Defaults to True.
+        raw_predictions (np.ndarray, optional): Raw prediction values for position sizing (required if position_sizing=True).
         transaction_cost (float, optional): Transaction cost in percentage. Defaults to 0.0001 (1 pip).
         initial_capital (float, optional): Initial capital. Defaults to 10000.
         position_size (float, optional): Position size as a fraction of capital. Defaults to 1.0.
@@ -47,8 +78,21 @@ def calculate_returns(
     # Calculate price changes
     price_changes = price_data['Close'].pct_change()
     
-    # Calculate returns based on positions
-    strategy_returns = positions_series.shift(1) * price_changes.loc[positions_series.index]
+    # Apply position sizing if enabled and raw predictions provided
+    if position_sizing and raw_predictions is not None:
+        # Create a series of position sizes based on signal strength
+        # Scale from 0 to 1 based on absolute value of prediction
+        # This ensures that stronger signals get larger position sizes
+        signal_strength = pd.Series(
+            np.abs(raw_predictions) / np.max([1.0, np.max(np.abs(raw_predictions))]),
+            index=positions_series.index
+        )
+        
+        # Calculate returns with dynamic position sizing
+        strategy_returns = positions_series * price_changes.loc[positions_series.index] * signal_strength
+    else:
+        # Standard returns calculation with fixed position sizes
+        strategy_returns = positions_series * price_changes.loc[positions_series.index]
     
     # Calculate transaction costs
     position_changes = positions_series.diff().abs()
@@ -137,7 +181,9 @@ def calculate_trading_metrics(
 
 def convert_predictions_to_positions(
     predictions: np.ndarray,
-    multi_class: bool = False
+    multi_class: bool = False,
+    is_continuous: bool = True,  # Added parameter for continuous predictions
+    threshold: float = 0.1      # Added threshold for continuous predictions
 ) -> np.ndarray:
     """
     Convert model predictions to trading positions.
@@ -145,15 +191,20 @@ def convert_predictions_to_positions(
     Args:
         predictions (np.ndarray): Model predictions
         multi_class (bool, optional): Whether predictions are multi-class. Defaults to False.
+        is_continuous (bool, optional): Whether predictions are continuous values. Defaults to True.
+        threshold (float, optional): Threshold for continuous predictions. Defaults to 0.1.
         
     Returns:
         np.ndarray: Trading positions (1 for long, 0 for neutral, -1 for short)
     """
-    if multi_class:
-        # Assuming predictions are class indices: 0 (short), 1 (neutral), 2 (long)
+    if is_continuous:
+        # For continuous predictions (-1 to 1 range)
+        return convert_continuous_to_positions(predictions, threshold)
+    elif multi_class:
+        # For multi-class predictions (0=short, 1=neutral, 2=long)
         return predictions - 1
     else:
-        # Assuming binary predictions: 0 (short) or 1 (long)
+        # For binary predictions (0=short, 1=long)
         return 2 * predictions - 1
 
 
@@ -163,7 +214,9 @@ def evaluate_trading_performance(
     price_data: pd.DataFrame,
     test_start_idx: int,
     model_type: str,
+    is_continuous: bool = True,  # Added parameter for continuous predictions
     multi_class: bool = False,
+    threshold: float = 0.1,      # Added threshold for continuous predictions
     transaction_cost: float = 0.0001,
     risk_free_rate: float = 0.0
 ) -> Tuple[Dict[str, float], pd.DataFrame]:
@@ -176,7 +229,9 @@ def evaluate_trading_performance(
         price_data (pd.DataFrame): DataFrame with price data
         test_start_idx (int): Starting index of test data in price_data
         model_type (str): Type of model ('CNN-LSTM', 'TFT', 'XGBoost', 'Bagging')
+        is_continuous (bool, optional): Whether model makes continuous predictions. Defaults to True.
         multi_class (bool, optional): Whether model makes multi-class predictions. Defaults to False.
+        threshold (float, optional): Threshold for continuous predictions. Defaults to 0.1.
         transaction_cost (float, optional): Transaction cost in percentage. Defaults to 0.0001 (1 pip).
         risk_free_rate (float, optional): Annual risk-free rate. Defaults to 0.0.
         
@@ -184,21 +239,44 @@ def evaluate_trading_performance(
         Tuple[Dict[str, float], pd.DataFrame]: Trading metrics and trading summary DataFrame
     """
     # Get predictions
+    raw_predictions = None
+    
     if model_type == 'CNN-LSTM':
         from src.models.cnn_lstm import predict_with_cnn_lstm
-        predictions, _ = predict_with_cnn_lstm(model, X_test)
+        predictions, raw_predictions = predict_with_cnn_lstm(
+            model, X_test, regression=is_continuous, threshold=threshold
+        )
     
     elif model_type == 'TFT':
         from src.models.tft import predict_with_tft
-        predictions = predict_with_tft(model, X_test)
-        predictions = (predictions > 0.5).astype(int)
+        raw_predictions = predict_with_tft(model, X_test)
+        # For continuous predictions, use raw values
+        # For binary classification, threshold the values
+        if not is_continuous:
+            predictions = (raw_predictions > threshold).astype(int)
+        else:
+            predictions = raw_predictions
     
     elif model_type == 'XGBoost':
         from src.models.xgboost_model import predict_with_xgboost
-        predictions = predict_with_xgboost(model, X_test)
+        if is_continuous:
+            # For regression XGBoost, get raw predictions
+            raw_predictions = predict_with_xgboost(model, X_test, return_probabilities=False)
+            predictions = raw_predictions
+        else:
+            # For classification XGBoost
+            predictions = predict_with_xgboost(model, X_test)
+            raw_predictions = predict_with_xgboost(model, X_test, return_probabilities=True)
     
     elif model_type == 'Bagging':
-        predictions = model.predict(X_test)
+        if is_continuous:
+            # For continuous predictions
+            raw_predictions = model.predict_proba(X_test)  # Get continuous values
+            predictions = raw_predictions
+        else:
+            # For classification
+            predictions = model.predict(X_test)
+            raw_predictions = model.predict_proba(X_test)
     
     else:
         error_msg = f"Unsupported model type: {model_type}"
@@ -206,13 +284,20 @@ def evaluate_trading_performance(
         raise ValueError(error_msg)
     
     # Convert predictions to positions
-    positions = convert_predictions_to_positions(predictions, multi_class)
+    positions = convert_predictions_to_positions(
+        predictions, 
+        multi_class=multi_class, 
+        is_continuous=is_continuous,
+        threshold=threshold
+    )
     
     # Calculate returns and equity curve
     returns, equity_curve, drawdown = calculate_returns(
         price_data,
         positions,
         start_idx=test_start_idx,
+        position_sizing=is_continuous,  # Use position sizing for continuous predictions
+        raw_predictions=raw_predictions if is_continuous else None,
         transaction_cost=transaction_cost
     )
     
@@ -223,6 +308,7 @@ def evaluate_trading_performance(
     summary = pd.DataFrame({
         'Close': price_data['Close'].iloc[test_start_idx:test_start_idx+len(positions)],
         'Position': positions,
+        'Signal': raw_predictions if raw_predictions is not None else positions,  # Store raw predictions if available
         'Return': returns,
         'Equity': equity_curve,
         'Drawdown': drawdown
@@ -259,6 +345,7 @@ def calculate_buy_hold_performance(
         price_data,
         positions,
         start_idx=test_start_idx,
+        position_sizing=False,  # No position sizing for buy & hold
         transaction_cost=0.0001  # Only applies to the initial trade
     )
     
@@ -425,45 +512,59 @@ def compare_models_performance(
     return comparison_df
 
 
-def plot_equity_curves(
-    equity_curves: Dict[str, pd.Series],
-    title: str = 'Equity Curves Comparison',
-    y_label: str = 'Equity ($)',
-    figsize: Tuple[int, int] = (12, 6),
-    save_path: str = None,
+def plot_signal_strength_vs_returns(
+    summary: pd.DataFrame,
+    title: str = 'Signal Strength vs Returns',
+    save_path: Optional[str] = None,
     show_plot: bool = True
 ) -> None:
     """
-    Plot equity curves for multiple strategies.
+    Plot signal strength vs returns.
     
     Args:
-        equity_curves (Dict[str, pd.Series]): Dictionary mapping strategy names to their equity curves
-        title (str, optional): Plot title. Defaults to 'Equity Curves Comparison'.
-        y_label (str, optional): Y-axis label. Defaults to 'Equity ($)'.
-        figsize (Tuple[int, int], optional): Figure size. Defaults to (12, 6).
+        summary (pd.DataFrame): Trading summary DataFrame with Signal and Return columns
+        title (str, optional): Plot title. Defaults to 'Signal Strength vs Returns'.
         save_path (str, optional): Path to save the plot. Defaults to None.
         show_plot (bool, optional): Whether to show the plot. Defaults to True.
     """
-    plt.figure(figsize=figsize)
+    # Check if Signal column contains continuous values
+    if not pd.api.types.is_numeric_dtype(summary['Signal']):
+        logger.warning("Signal column is not numeric. Cannot plot signal strength vs returns.")
+        return
     
-    for name, curve in equity_curves.items():
-        plt.plot(curve.index, curve, label=name)
+    # Create scatter plot
+    plt.figure(figsize=(10, 6))
+    
+    # Plot signal strength vs returns
+    plt.scatter(
+        summary['Signal'],
+        summary['Return'] * 100,  # Convert to percentage
+        alpha=0.5,
+        s=30,
+        c=summary['Return'] > 0,  # Color by profit/loss
+        cmap='RdYlGn'
+    )
+    
+    # Add trend line
+    from scipy import stats
+    slope, intercept, r_value, p_value, std_err = stats.linregress(summary['Signal'], summary['Return'] * 100)
+    x = np.array([summary['Signal'].min(), summary['Signal'].max()])
+    y = slope * x + intercept
+    plt.plot(x, y, 'r--', label=f'Trend (r={r_value:.3f})')
+    
+    plt.axhline(y=0, color='gray', linestyle='-', alpha=0.5)
+    plt.axvline(x=0, color='gray', linestyle='-', alpha=0.5)
     
     plt.title(title)
-    plt.xlabel('Date')
-    plt.ylabel(y_label)
-    plt.grid(True)
+    plt.xlabel('Signal Strength')
+    plt.ylabel('Return (%)')
+    plt.grid(True, alpha=0.3)
     plt.legend()
     
-    # Format x-axis dates
-    plt.gcf().autofmt_xdate()
-    
-    plt.tight_layout()
-    
     # Save plot if requested
-    if save_path is not None:
+    if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        logger.info(f"Saved equity curves plot to {save_path}")
+        logger.info(f"Saved signal strength vs returns plot to {save_path}")
     
     # Show plot if requested
     if show_plot:
@@ -472,48 +573,47 @@ def plot_equity_curves(
         plt.close()
 
 
-def plot_drawdowns(
-    drawdowns: Dict[str, pd.Series],
-    title: str = 'Drawdowns Comparison',
-    y_label: str = 'Drawdown (%)',
-    figsize: Tuple[int, int] = (12, 6),
-    save_path: str = None,
+def plot_signal_distribution(
+    summary: pd.DataFrame,
+    title: str = 'Signal Strength Distribution',
+    save_path: Optional[str] = None,
     show_plot: bool = True
 ) -> None:
     """
-    Plot drawdowns for multiple strategies.
+    Plot distribution of signal strengths.
     
     Args:
-        drawdowns (Dict[str, pd.Series]): Dictionary mapping strategy names to their drawdowns
-        title (str, optional): Plot title. Defaults to 'Drawdowns Comparison'.
-        y_label (str, optional): Y-axis label. Defaults to 'Drawdown (%)'.
-        figsize (Tuple[int, int], optional): Figure size. Defaults to (12, 6).
+        summary (pd.DataFrame): Trading summary DataFrame with Signal column
+        title (str, optional): Plot title. Defaults to 'Signal Strength Distribution'.
         save_path (str, optional): Path to save the plot. Defaults to None.
         show_plot (bool, optional): Whether to show the plot. Defaults to True.
     """
-    plt.figure(figsize=figsize)
+    # Check if Signal column contains continuous values
+    if not pd.api.types.is_numeric_dtype(summary['Signal']):
+        logger.warning("Signal column is not numeric. Cannot plot signal distribution.")
+        return
     
-    for name, curve in drawdowns.items():
-        plt.plot(curve.index, curve * 100, label=name)  # Convert to percentage
+    # Create figure
+    plt.figure(figsize=(10, 6))
+    
+    # Calculate profitable signals
+    profitable = summary[summary['Return'] > 0]['Signal']
+    losing = summary[summary['Return'] <= 0]['Signal']
+    
+    # Plot distributions
+    plt.hist(profitable, bins=20, alpha=0.5, label='Profitable', color='green')
+    plt.hist(losing, bins=20, alpha=0.5, label='Losing', color='red')
     
     plt.title(title)
-    plt.xlabel('Date')
-    plt.ylabel(y_label)
-    plt.grid(True)
+    plt.xlabel('Signal Strength')
+    plt.ylabel('Frequency')
+    plt.grid(True, alpha=0.3)
     plt.legend()
     
-    # Format x-axis dates
-    plt.gcf().autofmt_xdate()
-    
-    # Invert y-axis since drawdowns are negative
-    plt.gca().invert_yaxis()
-    
-    plt.tight_layout()
-    
     # Save plot if requested
-    if save_path is not None:
+    if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        logger.info(f"Saved drawdowns plot to {save_path}")
+        logger.info(f"Saved signal distribution plot to {save_path}")
     
     # Show plot if requested
     if show_plot:
@@ -524,20 +624,22 @@ def plot_drawdowns(
 
 def plot_returns_heatmap(
     returns: pd.Series,
+    signal_strength: Optional[pd.Series] = None,
     title: str = 'Returns Heatmap',
     figsize: Tuple[int, int] = (12, 8),
-    save_path: str = None,
+    save_path: Optional[str] = None,
     show_plot: bool = True
 ) -> None:
     """
-    Plot a heatmap of returns by day of week and hour.
+    Plot a heatmap of returns by day of week and hour, optionally colored by signal strength.
     
     Args:
         returns (pd.Series): Series of returns with DatetimeIndex
+        signal_strength (pd.Series, optional): Series of signal strengths. Defaults to None.
         title (str, optional): Plot title. Defaults to 'Returns Heatmap'.
         figsize (Tuple[int, int], optional): Figure size. Defaults to (12, 8).
-        save_path (str, optional): Path to save the plot. Defaults to None.
-        show_plot (bool, optional): Whether to show the plot. Defaults to True.
+        save_path (str, optional): Path to save the figure. Defaults to None.
+        show_plot (bool, optional): Whether to display the plot. Defaults to True.
     """
     import seaborn as sns
     
@@ -546,34 +648,73 @@ def plot_returns_heatmap(
     returns_df['Day'] = returns_df.index.day_name()
     returns_df['Hour'] = returns_df.index.hour
     
+    # Add signal strength if provided
+    if signal_strength is not None:
+        returns_df['Signal'] = signal_strength
+    
     # Sort days of week
     days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     returns_df['Day'] = pd.Categorical(returns_df['Day'], categories=days_order, ordered=True)
     
-    # Create pivot table
-    pivot = returns_df.pivot_table(
+    # Create pivot table for returns
+    pivot_returns = returns_df.pivot_table(
         values=returns_df.columns[0],
         index='Day',
         columns='Hour',
         aggfunc='mean'
     )
     
-    # Plot heatmap
+    # Create figure
     plt.figure(figsize=figsize)
-    sns.heatmap(
-        pivot,
-        cmap='RdYlGn',
-        center=0,
-        linewidths=0.5,
-        annot=True,
-        fmt='.4f'
-    )
+    
+    # Plot heatmap
+    if signal_strength is not None:
+        # Create pivot table for signal strength
+        pivot_signal = returns_df.pivot_table(
+            values='Signal',
+            index='Day',
+            columns='Hour',
+            aggfunc='mean'
+        )
+        
+        # Plot returns with signal strength as size
+        ax = sns.heatmap(
+            pivot_returns * 100,  # Convert to percentage
+            cmap='RdYlGn',
+            center=0,
+            linewidths=0.5,
+            annot=True,
+            fmt='.2f'
+        )
+        
+        # Overlay signal strength as markers
+        for i in range(len(pivot_returns.index)):
+            for j in range(len(pivot_returns.columns)):
+                if not pd.isna(pivot_signal.iloc[i, j]):
+                    size = abs(pivot_signal.iloc[i, j]) * 100  # Scale marker size
+                    plt.scatter(
+                        j + 0.5,
+                        i + 0.5,
+                        s=size,
+                        color='black' if pivot_signal.iloc[i, j] >= 0 else 'white',
+                        alpha=0.5,
+                        edgecolors='gray'
+                    )
+    else:
+        # Plot just returns
+        sns.heatmap(
+            pivot_returns * 100,  # Convert to percentage
+            cmap='RdYlGn',
+            center=0,
+            linewidths=0.5,
+            annot=True,
+            fmt='.2f'
+        )
     
     plt.title(title)
-    plt.tight_layout()
     
     # Save plot if requested
-    if save_path is not None:
+    if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
         logger.info(f"Saved returns heatmap to {save_path}")
     
@@ -582,309 +723,3 @@ def plot_returns_heatmap(
         plt.show()
     else:
         plt.close()
-
-
-def plot_market_conditions_performance(
-    condition_performance: Dict[str, Dict[str, float]],
-    metric: str = 'total_return',
-    title: str = None,
-    figsize: Tuple[int, int] = (12, 6),
-    save_path: str = None,
-    show_plot: bool = True
-) -> None:
-    """
-    Plot performance by market condition.
-    
-    Args:
-        condition_performance (Dict[str, Dict[str, float]]): Dictionary mapping conditions to metrics
-        metric (str, optional): Metric to plot. Defaults to 'total_return'.
-        title (str, optional): Plot title. Defaults to None.
-        figsize (Tuple[int, int], optional): Figure size. Defaults to (12, 6).
-        save_path (str, optional): Path to save the plot. Defaults to None.
-        show_plot (bool, optional): Whether to show the plot. Defaults to True.
-    """
-    # Extract conditions and values
-    conditions = []
-    values = []
-    counts = []
-    
-    for condition, metrics in condition_performance.items():
-        conditions.append(condition)
-        values.append(metrics.get(metric, 0))
-        counts.append(metrics.get('count', 0))
-    
-    # Create DataFrame
-    df = pd.DataFrame({
-        'Condition': conditions,
-        metric: values,
-        'Count': counts
-    })
-    
-    # Sort by metric value
-    df = df.sort_values(metric, ascending=False)
-    
-    # Create plot
-    plt.figure(figsize=figsize)
-    bars = plt.bar(df['Condition'], df[metric])
-    
-    # Color bars based on value
-    for i, bar in enumerate(bars):
-        bar.set_color('green' if df[metric].iloc[i] > 0 else 'red')
-    
-    # Add count labels
-    for i, bar in enumerate(bars):
-        plt.text(
-            bar.get_x() + bar.get_width()/2.,
-            0.01,
-            f'n={df["Count"].iloc[i]}',
-            ha='center',
-            va='bottom',
-            color='black',
-            fontweight='bold',
-            rotation=90
-        )
-    
-    # Set title and labels
-    if title is None:
-        title = f'Performance by Market Condition ({metric})'
-    
-    plt.title(title)
-    plt.ylabel(metric)
-    plt.grid(True, axis='y')
-    
-    # Rotate x-axis labels for better readability
-    plt.xticks(rotation=45, ha='right')
-    
-    plt.tight_layout()
-    
-    # Save plot if requested
-    if save_path is not None:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        logger.info(f"Saved market conditions performance plot to {save_path}")
-    
-    # Show plot if requested
-    if show_plot:
-        plt.show()
-    else:
-        plt.close()
-
-
-def save_performance_results(
-    results: Dict,
-    model_name: str,
-    currency_pair: str
-) -> str:
-    """
-    Save performance results to a file.
-    
-    Args:
-        results (Dict): Dictionary of performance results
-        model_name (str): Name of the model
-        currency_pair (str): Currency pair code
-        
-    Returns:
-        str: Path where the results were saved
-    """
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    
-    # Create filename
-    filename = f"{model_name}_{currency_pair}_performance.json"
-    output_path = os.path.join(RESULTS_DIR, filename)
-    
-    # Convert numpy types to native Python types for JSON serialization
-    def convert_numpy_types(obj):
-        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64,
-                           np.uint8, np.uint16, np.uint32, np.uint64)):
-            return int(obj)
-        elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
-            return float(obj)
-        elif isinstance(obj, (np.ndarray,)):
-            return obj.tolist()
-        elif isinstance(obj, dict):
-            return {key: convert_numpy_types(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
-            return [convert_numpy_types(item) for item in obj]
-        else:
-            return obj
-    
-    # Convert results
-    converted_results = convert_numpy_types(results)
-    
-    # Save results
-    with open(output_path, 'w') as f:
-        json.dump(converted_results, f, indent=4)
-    
-    logger.info(f"Saved performance results for {model_name} on {currency_pair} to {output_path}")
-    
-    return output_path
-
-
-def load_performance_results(
-    model_name: str,
-    currency_pair: str
-) -> Dict:
-    """
-    Load performance results from a file.
-    
-    Args:
-        model_name (str): Name of the model
-        currency_pair (str): Currency pair code
-        
-    Returns:
-        Dict: Dictionary of performance results
-    """
-    # Create filename
-    filename = f"{model_name}_{currency_pair}_performance.json"
-    file_path = os.path.join(RESULTS_DIR, filename)
-    
-    if not os.path.exists(file_path):
-        error_msg = f"Performance results file not found: {file_path}"
-        logger.error(error_msg)
-        raise FileNotFoundError(error_msg)
-    
-    # Load results
-    with open(file_path, 'r') as f:
-        results = json.load(f)
-    
-    logger.info(f"Loaded performance results for {model_name} on {currency_pair} from {file_path}")
-    
-    return results
-
-
-def create_performance_report(
-    all_metrics: Dict[str, Dict[str, Dict[str, float]]],
-    buy_hold_metrics: Dict[str, Dict[str, float]],
-    market_condition_performance: Dict[str, Dict[str, Dict[str, Dict[str, float]]]],
-    key_metrics: List[str] = None
-) -> pd.DataFrame:
-    """
-    Create a comprehensive performance report.
-    
-    Args:
-        all_metrics (Dict[str, Dict[str, Dict[str, float]]]): Dictionary with metrics:
-            - Outer key: Currency pair
-            - Middle key: Model name
-            - Inner key: Metric name
-            - Value: Metric value
-        buy_hold_metrics (Dict[str, Dict[str, float]]): Dictionary with buy & hold metrics:
-            - Outer key: Currency pair
-            - Inner key: Metric name
-            - Value: Metric value
-        market_condition_performance (Dict[str, Dict[str, Dict[str, Dict[str, float]]]]): 
-            Dictionary with market condition performance:
-            - Outer key: Currency pair
-            - Second key: Model name
-            - Third key: Market condition
-            - Inner key: Metric name
-            - Value: Metric value
-        key_metrics (List[str], optional): List of key metrics to include. Defaults to None.
-        
-    Returns:
-        pd.DataFrame: DataFrame with performance report
-    """
-    # Use default key metrics if not provided
-    if key_metrics is None:
-        key_metrics = ['annual_return', 'sharpe_ratio', 'max_drawdown', 'win_rate']
-    
-    # Create report data
-    report_data = []
-    
-    for pair, pair_metrics in all_metrics.items():
-        for model, model_metrics in pair_metrics.items():
-            # Add basic metrics
-            row = {
-                'Currency Pair': pair,
-                'Model': model
-            }
-            
-            # Add key metrics
-            for metric in key_metrics:
-                if metric in model_metrics:
-                    row[metric] = model_metrics[metric]
-            
-            # Add comparison to buy & hold
-            if pair in buy_hold_metrics:
-                for metric in key_metrics:
-                    if metric in model_metrics and metric in buy_hold_metrics[pair]:
-                        if metric != 'max_drawdown':
-                            # For metrics where higher is better
-                            row[f'{metric}_vs_BH'] = model_metrics[metric] / buy_hold_metrics[pair][metric] - 1
-                        else:
-                            # For drawdown, lower is better
-                            row[f'{metric}_vs_BH'] = buy_hold_metrics[pair][metric] / model_metrics[metric] - 1
-            
-            # Add market condition performance
-            if pair in market_condition_performance and model in market_condition_performance[pair]:
-                for condition, condition_metrics in market_condition_performance[pair][model].items():
-                    if 'total_return' in condition_metrics:
-                        row[f'{condition}_return'] = condition_metrics['total_return']
-                    if 'win_rate' in condition_metrics:
-                        row[f'{condition}_win_rate'] = condition_metrics['win_rate']
-            
-            report_data.append(row)
-    
-    # Create DataFrame
-    report_df = pd.DataFrame(report_data)
-    
-    return report_df
-
-
-def save_trading_summary(
-    summary: pd.DataFrame,
-    model_name: str,
-    currency_pair: str
-) -> str:
-    """
-    Save trading summary to a CSV file.
-    
-    Args:
-        summary (pd.DataFrame): Trading summary DataFrame
-        model_name (str): Name of the model
-        currency_pair (str): Currency pair code
-        
-    Returns:
-        str: Path where the summary was saved
-    """
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    
-    # Create filename
-    filename = f"{model_name}_{currency_pair}_summary.csv"
-    output_path = os.path.join(RESULTS_DIR, filename)
-    
-    # Save summary
-    summary.to_csv(output_path)
-    
-    logger.info(f"Saved trading summary for {model_name} on {currency_pair} to {output_path}")
-    
-    return output_path
-
-
-def load_trading_summary(
-    model_name: str,
-    currency_pair: str
-) -> pd.DataFrame:
-    """
-    Load trading summary from a CSV file.
-    
-    Args:
-        model_name (str): Name of the model
-        currency_pair (str): Currency pair code
-        
-    Returns:
-        pd.DataFrame: Trading summary DataFrame
-    """
-    # Create filename
-    filename = f"{model_name}_{currency_pair}_summary.csv"
-    file_path = os.path.join(RESULTS_DIR, filename)
-    
-    if not os.path.exists(file_path):
-        error_msg = f"Trading summary file not found: {file_path}"
-        logger.error(error_msg)
-        raise FileNotFoundError(error_msg)
-    
-    # Load summary
-    summary = pd.read_csv(file_path, index_col=0, parse_dates=True)
-    
-    logger.info(f"Loaded trading summary for {model_name} on {currency_pair} from {file_path}")
-    
-    return summary

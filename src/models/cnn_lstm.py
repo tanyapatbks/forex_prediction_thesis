@@ -1,5 +1,5 @@
 """
-CNN-LSTM hybrid model for Forex prediction.
+Modified CNN-LSTM model for continuous target prediction.
 """
 
 import os
@@ -90,6 +90,7 @@ def create_sequences(
 def build_cnn_lstm_model(
     input_shape: Tuple[int, int],
     output_size: int = 1,
+    regression: bool = True,  # Added parameter to indicate regression task
     cnn_layers: List[Dict] = None,
     lstm_layers: List[Dict] = None,
     dense_layers: List[Dict] = None,
@@ -103,7 +104,8 @@ def build_cnn_lstm_model(
     
     Args:
         input_shape (Tuple[int, int]): Shape of input sequences (sequence_length, n_features)
-        output_size (int, optional): Size of output (1 for binary classification). Defaults to 1.
+        output_size (int, optional): Size of output (1 for regression or binary classification). Defaults to 1.
+        regression (bool, optional): Whether the task is regression. Defaults to True.
         cnn_layers (List[Dict], optional): List of CNN layer configurations. Defaults to None.
         lstm_layers (List[Dict], optional): List of LSTM layer configurations. Defaults to None.
         dense_layers (List[Dict], optional): List of dense layer configurations. Defaults to None.
@@ -182,10 +184,15 @@ def build_cnn_lstm_model(
         x = Dropout(dropout_rate)(x)
     
     # Output layer
-    if output_size == 1:
-        outputs = Dense(1, activation='sigmoid')(x)
+    if regression:
+        # For regression, use linear activation
+        outputs = Dense(output_size, activation='linear')(x)
     else:
-        outputs = Dense(output_size, activation='softmax')(x)
+        # For classification (binary or multiclass)
+        if output_size == 1:
+            outputs = Dense(1, activation='sigmoid')(x)
+        else:
+            outputs = Dense(output_size, activation='softmax')(x)
     
     # Create model
     model = Model(inputs=inputs, outputs=outputs)
@@ -193,20 +200,29 @@ def build_cnn_lstm_model(
     # Compile model
     optimizer = Adam(learning_rate=learning_rate)
     
-    if output_size == 1:
+    if regression:
+        # For regression tasks
         model.compile(
             optimizer=optimizer,
-            loss='binary_crossentropy',
-            metrics=['accuracy']
+            loss='mse',  # Mean squared error loss
+            metrics=['mae', 'mse']  # Track mean absolute error and mean squared error
         )
     else:
-        model.compile(
-            optimizer=optimizer,
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
-        )
+        # For classification tasks
+        if output_size == 1:
+            model.compile(
+                optimizer=optimizer,
+                loss='binary_crossentropy',
+                metrics=['accuracy']
+            )
+        else:
+            model.compile(
+                optimizer=optimizer,
+                loss='sparse_categorical_crossentropy',
+                metrics=['accuracy']
+            )
     
-    logger.info(f"Built CNN-LSTM model with input shape {input_shape}")
+    logger.info(f"Built CNN-LSTM model with input shape {input_shape}, {'regression' if regression else 'classification'} task")
     
     return model
 
@@ -216,6 +232,7 @@ def train_cnn_lstm_model(
     y_train: np.ndarray,
     X_val: np.ndarray,
     y_val: np.ndarray,
+    regression: bool = True,  # Added parameter for regression
     model_config: Dict = None,
     training_config: Dict = None,
     model_name: str = 'cnn_lstm',
@@ -229,6 +246,7 @@ def train_cnn_lstm_model(
         y_train (np.ndarray): Training target values
         X_val (np.ndarray): Validation input sequences
         y_val (np.ndarray): Validation target values
+        regression (bool, optional): Whether the task is regression. Defaults to True.
         model_config (Dict, optional): Model configuration. Defaults to None.
         training_config (Dict, optional): Training configuration. Defaults to None.
         model_name (str, optional): Name for the saved model. Defaults to 'cnn_lstm'.
@@ -270,11 +288,12 @@ def train_cnn_lstm_model(
     
     # Build model
     input_shape = (X_train.shape[1], X_train.shape[2])
-    output_size = 1 if len(y_train.shape) == 1 else y_train.shape[1]
+    output_size = 1  # Usually 1 for regression or binary classification
     
     model = build_cnn_lstm_model(
         input_shape=input_shape,
         output_size=output_size,
+        regression=regression,  # Pass the regression flag
         **model_config
     )
     
@@ -282,8 +301,10 @@ def train_cnn_lstm_model(
     callbacks = []
     
     # Early stopping
+    monitor_metric = 'val_loss'  # Use loss for both regression and classification
+    
     early_stop = EarlyStopping(
-        monitor='val_loss',
+        monitor=monitor_metric,
         patience=training_config['patience'],
         min_delta=training_config['min_delta'],
         restore_best_weights=True,
@@ -293,7 +314,7 @@ def train_cnn_lstm_model(
     
     # Learning rate reduction
     reduce_lr = ReduceLROnPlateau(
-        monitor='val_loss',
+        monitor=monitor_metric,
         factor=0.5,
         patience=5,
         min_delta=0.001,
@@ -308,7 +329,7 @@ def train_cnn_lstm_model(
         checkpoint_path = os.path.join(TRAINED_MODELS_DIR, f"{model_name}_checkpoint.h5")
         checkpoint = ModelCheckpoint(
             checkpoint_path,
-            monitor='val_loss',
+            monitor=monitor_metric,
             save_best_only=True,
             verbose=1
         )
@@ -337,7 +358,8 @@ def train_cnn_lstm_model(
                 'model_config': model_config,
                 'training_config': training_config,
                 'input_shape': input_shape,
-                'output_size': output_size
+                'output_size': output_size,
+                'regression': regression  # Save regression flag
             }, f, indent=4)
         
         logger.info(f"Saved trained model to {model_path}")
@@ -350,7 +372,8 @@ def train_cnn_lstm_model(
 def evaluate_cnn_lstm_model(
     model: Model,
     X_test: np.ndarray,
-    y_test: np.ndarray
+    y_test: np.ndarray,
+    regression: bool = True  # Added parameter for regression
 ) -> Dict[str, float]:
     """
     Evaluate a trained CNN-LSTM model.
@@ -359,6 +382,7 @@ def evaluate_cnn_lstm_model(
         model (Model): Trained CNN-LSTM model
         X_test (np.ndarray): Test input sequences
         y_test (np.ndarray): Test target values
+        regression (bool, optional): Whether the task is regression. Defaults to True.
         
     Returns:
         Dict[str, float]: Evaluation metrics
@@ -369,37 +393,63 @@ def evaluate_cnn_lstm_model(
     # Get metrics
     metrics = {}
     
-    if len(model.metrics_names) >= 1:
-        metrics['loss'] = evaluation[0]
-    
-    if len(model.metrics_names) >= 2:
-        metrics['accuracy'] = evaluation[1]
-    
-    # Get predictions
-    y_pred_proba = model.predict(X_test)
-    y_pred = (y_pred_proba > 0.5).astype(int) if y_pred_proba.shape[1:] == () or y_pred_proba.shape[1] == 1 else np.argmax(y_pred_proba, axis=1)
-    
-    # Additional metrics for binary classification
-    if y_test.ndim == 1 or y_test.shape[1] == 1:
-        from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+    if regression:
+        # Regression metrics
+        metrics['loss'] = evaluation[0]  # MSE
+        metrics['mae'] = evaluation[1]   # Mean Absolute Error
+        metrics['mse'] = evaluation[2]   # Mean Squared Error
         
-        # Flatten predictions if needed
-        if y_pred.ndim > 1:
-            y_pred = y_pred.flatten()
+        # Additional regression metrics
+        y_pred = model.predict(X_test)
         
-        if y_pred_proba.ndim > 1:
-            y_pred_proba = y_pred_proba.flatten()
+        # Root Mean Squared Error (RMSE)
+        metrics['rmse'] = np.sqrt(metrics['mse'])
         
-        # Calculate metrics
-        metrics['accuracy'] = accuracy_score(y_test, y_pred)
-        metrics['precision'] = precision_score(y_test, y_pred, zero_division=0)
-        metrics['recall'] = recall_score(y_test, y_pred, zero_division=0)
-        metrics['f1_score'] = f1_score(y_test, y_pred, zero_division=0)
+        # R-squared (coefficient of determination)
+        ss_total = np.sum((y_test - np.mean(y_test)) ** 2)
+        ss_residual = np.sum((y_test - y_pred.flatten()) ** 2)
+        metrics['r2'] = 1 - (ss_residual / ss_total)
         
-        try:
-            metrics['roc_auc'] = roc_auc_score(y_test, y_pred_proba)
-        except:
-            metrics['roc_auc'] = 0.5  # Default value if AUC cannot be calculated
+        # Mean Absolute Percentage Error (MAPE)
+        # For direction strength prediction, MAPE might not be meaningful
+        
+        # Directional Accuracy (how often the sign of prediction matches the sign of actual)
+        correct_direction = np.sum(np.sign(y_pred.flatten()) == np.sign(y_test))
+        metrics['directional_accuracy'] = correct_direction / len(y_test)
+        
+    else:
+        # Classification metrics
+        if len(model.metrics_names) >= 1:
+            metrics['loss'] = evaluation[0]
+        
+        if len(model.metrics_names) >= 2:
+            metrics['accuracy'] = evaluation[1]
+        
+        # Get predictions
+        y_pred_proba = model.predict(X_test)
+        y_pred = (y_pred_proba > 0.5).astype(int) if y_pred_proba.shape[1:] == () or y_pred_proba.shape[1] == 1 else np.argmax(y_pred_proba, axis=1)
+        
+        # Additional metrics for binary classification
+        if y_test.ndim == 1 or y_test.shape[1] == 1:
+            from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+            
+            # Flatten predictions if needed
+            if y_pred.ndim > 1:
+                y_pred = y_pred.flatten()
+            
+            if y_pred_proba.ndim > 1:
+                y_pred_proba = y_pred_proba.flatten()
+            
+            # Calculate metrics
+            metrics['accuracy'] = accuracy_score(y_test, y_pred)
+            metrics['precision'] = precision_score(y_test, y_pred, zero_division=0)
+            metrics['recall'] = recall_score(y_test, y_pred, zero_division=0)
+            metrics['f1_score'] = f1_score(y_test, y_pred, zero_division=0)
+            
+            try:
+                metrics['roc_auc'] = roc_auc_score(y_test, y_pred_proba)
+            except:
+                metrics['roc_auc'] = 0.5  # Default value if AUC cannot be calculated
     
     logger.info(f"CNN-LSTM model evaluation: {metrics}")
     
@@ -409,6 +459,7 @@ def evaluate_cnn_lstm_model(
 def plot_training_history(
     history: Dict[str, List[float]],
     model_name: str = 'cnn_lstm',
+    regression: bool = True,  # Added parameter for regression
     save_plot: bool = True,
     show_plot: bool = True
 ) -> None:
@@ -418,6 +469,7 @@ def plot_training_history(
     Args:
         history (Dict[str, List[float]]): Training history
         model_name (str, optional): Name of the model. Defaults to 'cnn_lstm'.
+        regression (bool, optional): Whether the task is regression. Defaults to True.
         save_plot (bool, optional): Whether to save the plot. Defaults to True.
         show_plot (bool, optional): Whether to show the plot. Defaults to True.
     """
@@ -434,12 +486,20 @@ def plot_training_history(
     plt.legend()
     plt.grid(True)
     
-    # Plot training & validation accuracy
+    # Plot second metric (accuracy for classification, MAE for regression)
     plt.subplot(2, 1, 2)
-    plt.plot(history['accuracy'], label='Training Accuracy')
-    plt.plot(history['val_accuracy'], label='Validation Accuracy')
-    plt.title(f'{model_name} - Accuracy')
-    plt.ylabel('Accuracy')
+    if regression:
+        # For regression, plot Mean Absolute Error
+        plt.plot(history['mae'], label='Training MAE')
+        plt.plot(history['val_mae'], label='Validation MAE')
+        plt.title(f'{model_name} - Mean Absolute Error')
+        plt.ylabel('MAE')
+    else:
+        # For classification, plot accuracy
+        plt.plot(history['accuracy'], label='Training Accuracy')
+        plt.plot(history['val_accuracy'], label='Validation Accuracy')
+        plt.title(f'{model_name} - Accuracy')
+        plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
     plt.legend()
     plt.grid(True)
@@ -492,6 +552,7 @@ def load_cnn_lstm_model(model_name: str) -> Tuple[Model, Dict]:
 def predict_with_cnn_lstm(
     model: Model,
     X: np.ndarray,
+    regression: bool = True,  # Added parameter for regression
     threshold: float = 0.5
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -500,21 +561,27 @@ def predict_with_cnn_lstm(
     Args:
         model (Model): Trained CNN-LSTM model
         X (np.ndarray): Input sequences
+        regression (bool, optional): Whether the task is regression. Defaults to True.
         threshold (float, optional): Decision threshold for binary classification. Defaults to 0.5.
         
     Returns:
-        Tuple[np.ndarray, np.ndarray]: Predicted labels and probabilities
+        Tuple[np.ndarray, np.ndarray]: Predicted labels and raw predictions (regression values or probabilities)
     """
     # Get predictions
-    y_pred_proba = model.predict(X)
+    y_pred_raw = model.predict(X)
     
-    # Convert probabilities to labels
-    if y_pred_proba.shape[1:] == () or y_pred_proba.shape[1] == 1:
-        # Binary classification
-        y_pred_proba = y_pred_proba.flatten()
-        y_pred = (y_pred_proba > threshold).astype(int)
+    if regression:
+        # For regression, return the raw predictions and sign of predictions as labels
+        y_pred_labels = np.sign(y_pred_raw)  # Sign of the prediction (-1, 0, 1)
+        return y_pred_labels, y_pred_raw
     else:
-        # Multi-class classification
-        y_pred = np.argmax(y_pred_proba, axis=1)
+        # For classification, convert probabilities to labels
+        if y_pred_raw.shape[1:] == () or y_pred_raw.shape[1] == 1:
+            # Binary classification
+            y_pred_raw = y_pred_raw.flatten()
+            y_pred_labels = (y_pred_raw > threshold).astype(int)
+        else:
+            # Multi-class classification
+            y_pred_labels = np.argmax(y_pred_raw, axis=1)
     
-    return y_pred, y_pred_proba
+        return y_pred_labels, y_pred_raw

@@ -1,5 +1,5 @@
 """
-Data preprocessing utilities for the Forex prediction project.
+Enhanced data preprocessor with continuous target variable.
 """
 
 import os
@@ -215,9 +215,11 @@ def align_timeframes(
 
 def create_target_variable(
     data: pd.DataFrame,
-    target_type: str = 'binary',
+    target_type: str = 'continuous',
     look_ahead: int = 1,
-    threshold: float = 0.0
+    threshold: float = 0.0,
+    normalization_window: int = 20,
+    min_max_scale: bool = True
 ) -> pd.DataFrame:
     """
     Create target variable for prediction.
@@ -225,11 +227,12 @@ def create_target_variable(
     Args:
         data (pd.DataFrame): DataFrame with price data
         target_type (str, optional): Type of target variable to create. 
-                                    Options: 'binary' (up/down), 'continuous' (price change).
-                                    Defaults to 'binary'.
+                                    Options: 'binary' (up/down), 'ternary' (-1/0/1), 'continuous' (normalized price change).
+                                    Defaults to 'continuous'.
         look_ahead (int, optional): Number of periods to look ahead for target. Defaults to 1.
-        threshold (float, optional): Threshold for binary classification (in percentage).
-                                    Defaults to 0.0.
+        threshold (float, optional): Threshold for classification (in percentage). Defaults to 0.0.
+        normalization_window (int, optional): Window size for normalizing continuous target. Defaults to 20.
+        min_max_scale (bool, optional): Whether to scale continuous target to [-1, 1]. Defaults to True.
         
     Returns:
         pd.DataFrame: DataFrame with target variable added
@@ -240,24 +243,43 @@ def create_target_variable(
     # Calculate future price
     future_price = data_with_target['Close'].shift(-look_ahead)
     
+    # Calculate price change and percentage
+    price_change = future_price - data_with_target['Close']
+    price_change_pct = price_change / data_with_target['Close'] * 100
+    
     if target_type == 'binary':
-        # Calculate price change percentage
-        price_change_pct = (future_price - data_with_target['Close']) / data_with_target['Close'] * 100
-        
-        # Create binary target based on threshold
+        # Create binary target based on threshold (0 for down, 1 for up)
         data_with_target['target'] = (price_change_pct > threshold).astype(int)
         logger.info(f"Created binary target variable with look_ahead={look_ahead}, threshold={threshold}%")
         
+    elif target_type == 'ternary':
+        # Create ternary target (-1 for down, 0 for neutral, 1 for up)
+        data_with_target['target'] = np.sign(price_change_pct - threshold)
+        logger.info(f"Created ternary target variable with look_ahead={look_ahead}, threshold={threshold}%")
+        
     elif target_type == 'continuous':
-        # Use the actual price change percentage as target
-        price_change_pct = (future_price - data_with_target['Close']) / data_with_target['Close'] * 100
-        data_with_target['target'] = price_change_pct
-        logger.info(f"Created continuous target variable (price change %) with look_ahead={look_ahead}")
+        # For continuous target, we want to normalize the price change to account for volatility
+        # Calculate the volatility (standard deviation of returns) over a rolling window
+        returns = data_with_target['Close'].pct_change()
+        volatility = returns.rolling(window=normalization_window).std()
+        
+        # Normalize the price change by the volatility to get a measure of "strength"
+        # This gives higher values when the price change is large relative to recent volatility
+        normalized_change = price_change_pct / (volatility * 100 + 1e-8)  # Add small epsilon to avoid division by zero
+        
+        # Optionally scale to range [-1, 1] using min-max scaling or tanh
+        if min_max_scale:
+            # Use hyperbolic tangent (tanh) to scale to [-1, 1]
+            data_with_target['target'] = np.tanh(normalized_change)
+        else:
+            data_with_target['target'] = normalized_change
+            
+        logger.info(f"Created continuous target variable (normalized price change) with look_ahead={look_ahead}")
         
     else:
-        # Use the future price directly as target
-        data_with_target['target'] = future_price
-        logger.info(f"Created future price target variable with look_ahead={look_ahead}")
+        # Use the actual price change percentage as target
+        data_with_target['target'] = price_change_pct
+        logger.info(f"Created price change percentage target variable with look_ahead={look_ahead}")
     
     # Drop the last 'look_ahead' rows since we don't have targets for them
     data_with_target = data_with_target.iloc[:-look_ahead]
@@ -269,9 +291,11 @@ def preprocess_data(
     currency_pairs: List[str] = None,
     timeframe: str = "1H",
     handle_missing_method: str = 'interpolate',
-    target_type: str = 'binary',
+    target_type: str = 'continuous',  # Changed default to continuous
     look_ahead: int = 1,
     threshold: float = 0.0,
+    normalization_window: int = 20,  # Added parameter for volatility window
+    min_max_scale: bool = True,      # Added parameter for scaling
     train_start: str = None,
     train_end: str = None,
     test_start: str = None,
@@ -288,9 +312,13 @@ def preprocess_data(
         timeframe (str, optional): Timeframe of the data. Defaults to "1H".
         handle_missing_method (str, optional): Method to handle missing values.
                                             Defaults to 'interpolate'.
-        target_type (str, optional): Type of target variable to create. Defaults to 'binary'.
+        target_type (str, optional): Type of target variable to create. 
+                                    Options: 'binary', 'ternary', 'continuous'.
+                                    Defaults to 'continuous'.
         look_ahead (int, optional): Number of periods to look ahead for target. Defaults to 1.
-        threshold (float, optional): Threshold for binary classification. Defaults to 0.0.
+        threshold (float, optional): Threshold for classification. Defaults to 0.0.
+        normalization_window (int, optional): Window size for normalizing continuous target. Defaults to 20.
+        min_max_scale (bool, optional): Whether to scale continuous target to [-1, 1]. Defaults to True.
         train_start (str, optional): Start date for training data. If None, uses default config.
         train_end (str, optional): End date for training data. If None, uses default config.
         test_start (str, optional): Start date for test data. If None, uses default config.
@@ -318,6 +346,7 @@ def preprocess_data(
         currency_pairs = CURRENCY_PAIRS
     
     logger.info(f"Starting preprocessing pipeline for currency pairs: {currency_pairs}")
+    logger.info(f"Using target type: {target_type}")
     
     # Step 1: Load raw data
     raw_data_dict = load_all_currency_pairs(currency_pairs, timeframe)
@@ -341,7 +370,9 @@ def preprocess_data(
             df,
             target_type=target_type,
             look_ahead=look_ahead,
-            threshold=threshold
+            threshold=threshold,
+            normalization_window=normalization_window,
+            min_max_scale=min_max_scale
         )
     
     # Step 5: Split data into train, validation, and test sets
